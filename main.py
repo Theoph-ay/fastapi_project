@@ -115,6 +115,16 @@ async def login_page(request: Request):
         },
     )
 
+@app.get("/account", include_in_schema=False)
+async def account_page(request: Request):
+    return templates.TemplateResponse(
+        "account.html",
+        {
+            "request": request,
+            "title": "Account",
+        },
+    )
+
 @app.get("/register", include_in_schema=False)
 async def register_page(request: Request):
     return templates.TemplateResponse(
