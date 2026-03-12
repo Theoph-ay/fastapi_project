@@ -1,13 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
 from database import get_db
-from schemas import PostResponse, UserCreate, UserPublic, UserPrivate, Token, UserUpdate
+from schemas import PostResponse, UserCreate, UserPublic, UserPrivate, Token, UserUpdate, PaginatedPostsResponse
 
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
@@ -204,8 +204,13 @@ async def delete_user(
         delete_profile_image(old_filename)
 
 
-@router.get("/{user_id}/posts", response_model=list[PostResponse])
-async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+@router.get("/{user_id}/posts", response_model=PaginatedPostsResponse)
+async def get_user_posts(
+    user_id: int, 
+    db: Annotated[AsyncSession, Depends(get_db)],
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 10,
+    ):
     result = await db.execute(
         select(models.User).where(models.User.id == user_id),
         )
@@ -217,8 +222,20 @@ async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(get_d
             detail="User not found",
     )
 
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(models.Post)
+        .where(models.Post.user_id == user_id),
+        )
+    total = count_result.scalar() or 0
+
     result = await db.execute(
-        select(models.Post).where(models.Post.user_id == user_id).order_by(models.Post.date_posted.desc()),
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .where(models.Post.user_id == user_id)
+        .order_by(models.Post.date_posted.desc())
+        .offset(skip)
+        .limit(limit),
         )
     posts = result.scalars().all()
     return posts

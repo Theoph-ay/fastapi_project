@@ -103,19 +103,31 @@ async def user_posts_page(
             detail="user not found",
         )
 
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(models.Post)
+        .where(models.Post.user_id == user_id),
+        )
+    total = count_result.scalar() or 0
+
     result = await db.execute(
         select(models.Post)
         .options(selectinload(models.Post.author))
-        .where(models.Post.user_id == user_id).order_by(models.Post.date_posted.desc()),
+        .where(models.Post.user_id == user_id)
+        .order_by(models.Post.date_posted.desc())
+        .limit(settings.posts_per_page),
         )
     posts = result.scalars().all()
+    has_more = len(posts) < total
     return templates.TemplateResponse(
         "user_post.html",
         {
             "request": request,
             "posts": posts,
-            "User": user,
-            "title": f"{user.username}'s Posts"
+            "user": user,
+            "title": f"{user.username}'s Posts",
+            "limit": settings.posts_per_page,
+            "has_more": has_more,
         },
     )
 
