@@ -168,8 +168,6 @@ async def update_user(
         user.username = user_update.username
     if user_update.email is not None:
         user.email = user_update.email.lower()
-    if user_update.image_file is not None:
-        user.image_file = user_update.image_file
 
     await db.commit()
     await db.refresh(user)
@@ -203,7 +201,7 @@ async def delete_user(
     await db.commit()
 
     if old_filename:
-        delete_profile_image()
+        delete_profile_image(old_filename)
 
 
 @router.get("/{user_id}/posts", response_model=list[PostResponse])
@@ -266,13 +264,13 @@ async def upload_profile_picture(
 
     return current_user
 
-@router.delete("/{user_id}/picture", response_model=USerPrivate)
+@router.delete("/{user_id}/picture", response_model=UserPrivate)
 async def delete_user_picture(
     user_id: int,
-    current_user: CurrentUSer,
+    current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    if current_user.id != user_id
+    if current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this user's picture",

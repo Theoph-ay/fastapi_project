@@ -24,8 +24,8 @@ def process_profile_image(content: bytes) -> str:
 
     return filename
 
-def delete_profile_mage(filename: str | None) -> None:
-    if filenam is None:
+def delete_profile_image(filename: str | None) -> None:
+    if filename is None:
         return 
 
     filepath = PROFILE_PICS_DIR / filename
